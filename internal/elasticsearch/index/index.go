@@ -734,6 +734,7 @@ func resourceIndexCreate(ctx context.Context, d *schema.ResourceData, meta inter
 		return diags
 	}
 
+	// fmt.Printf("%v\n", index)
 	d.SetId(id.String())
 	return resourceIndexRead(ctx, d, meta)
 }

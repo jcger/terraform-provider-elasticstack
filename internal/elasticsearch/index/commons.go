@@ -9,10 +9,15 @@ import (
 )
 
 func ExpandIndexAliases(definedAliases *schema.Set) (map[string]models.IndexAlias, diag.Diagnostics) {
+	// creates variable diags of type diag.Diagnostics
 	var diags diag.Diagnostics
+	// creates variable aliases which is a map of key: string, value: models.IndexAlias type and is initialized to the length
+	// of definedAliases
 	aliases := make(map[string]models.IndexAlias, definedAliases.Len())
 
+	// runs through all definedAliases, ignores the key and a while contain the current value
 	for _, a := range definedAliases.List() {
+		// variable alias
 		alias := a.(map[string]interface{})
 		ia, diags := ExpandIndexAlias(alias)
 		if diags.HasError() {

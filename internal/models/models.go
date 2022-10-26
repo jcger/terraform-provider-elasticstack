@@ -187,3 +187,45 @@ type DataStreamIndex struct {
 type TimestampField struct {
 	Name string `json:"name"`
 }
+
+type AlertRuleSchedule struct {
+	Interval string `json:"interval"`
+}
+
+type Rule struct {
+	Consumer string `json:"consumer"`
+	// Id         string            `json:"id"`
+	Name       string            `json:"name"`
+	NotifyWhen string            `json:"notify_when"`
+	Params     AlertRuleParams   `json:"params"`
+	RuleTypeId string            `json:"rule_type_id"`
+	Schedule   AlertRuleSchedule `json:"schedule"`
+}
+
+type AlertRuleParams struct {
+	AggField            string   `json:"aggField"`
+	AggType             string   `json:"aggType"`
+	GroupBy             string   `json:"groupBy"`
+	Index               []string `json:"index"`
+	TermField           string   `json:"termField"`
+	TermSize            int      `json:"termSize"`
+	Threshold           []int    `json:"threshold"`
+	ThresholdComparator string   `json:"thresholdComparator"`
+	TimeField           string   `json:"timeField"`
+	TimeWindowSize      int      `json:"timeWindowSize"`
+	TimeWindowUnit      string   `json:"timeWindowUnit"`
+}
+
+// type AlertRuleParams struct {
+// 	AggType             string   `json:"agg_type"`
+// 	TermSize            string   `json:"term_size"`
+// 	ThresholdComparator string   `json:"threshold_comparator"`
+// 	TimeWindowSize      string   `json:"time_window_size"`
+// 	TimeWindowUnit      string   `json:"time_window_unit"`
+// 	GroupBy             string   `json:"group_by"`
+// 	Threshold           []int    `json:"threshold"`
+// 	Index               []string `json:"index"`
+// 	TimeField           string   `json:"time_field"`
+// 	AggField            string   `json:"agg_field"`
+// 	TermField           string   `json:"term_field"`
+// }
