@@ -134,57 +134,50 @@ func (t *KibanaApiClient) PostKibanaRule(ctx context.Context, rule *models.Rule)
 func (t *KibanaApiClient) PutKibanaRule(ctx context.Context, rule *models.Rule) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	// this should be implemented outside this provider
-	// var body = make(map[string]interface{})
-	// var params = make(map[string]interface{})
-	// var schedule = make(map[string]string)
-	// body["consumer"] = rule.Consumer
-	// body["name"] = rule.Name
-	// body["rule_type_id"] = rule.RuleTypeId
-	// body["notify_when"] = rule.NotifyWhen
+	// creates the post request body
+	var body = make(map[string]interface{})
+	var params = make(map[string]interface{})
+	var schedule = make(map[string]string)
 
-	// schedule["interval"] = rule.Schedule.Interval
+	// id is ignored as it will be loaded from the response
+	body["name"] = rule.Name
+	body["notify_when"] = rule.NotifyWhen
 
-	// params["aggType"] = rule.Params.AggType
-	// params["termSize"] = rule.Params.TermSize
-	// params["thresholdComparator"] = rule.Params.ThresholdComparator
-	// params["timeWindowSize"] = rule.Params.TimeWindowSize
-	// params["timeWindowUnit"] = rule.Params.TimeWindowUnit
-	// params["groupBy"] = rule.Params.GroupBy
-	// params["threshold"] = rule.Params.Threshold
-	// params["index"] = rule.Params.Index
-	// params["timeField"] = rule.Params.TimeField
-	// params["aggField"] = rule.Params.AggField
-	// params["termField"] = rule.Params.TermField
+	schedule["interval"] = rule.Schedule.Interval
 
-	// body["params"] = params
-	// body["schedule"] = schedule
+	params["aggType"] = rule.Params.AggType
+	params["termSize"] = rule.Params.TermSize
+	params["thresholdComparator"] = rule.Params.ThresholdComparator
+	params["timeWindowSize"] = rule.Params.TimeWindowSize
+	params["timeWindowUnit"] = rule.Params.TimeWindowUnit
+	params["groupBy"] = rule.Params.GroupBy
+	params["threshold"] = rule.Params.Threshold
+	params["index"] = rule.Params.Index
+	params["timeField"] = rule.Params.TimeField
+	params["aggField"] = rule.Params.AggField
+	params["termField"] = rule.Params.TermField
 
-	reqBodyJSON, err := json.Marshal(rule)
+	body["params"] = params
+	body["schedule"] = schedule
+
+	reqBodyJSON, err := json.Marshal(body)
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	fmt.Printf("\nReqBodyJSON:\n%v\n\nRule.Id:\n%s\n\n", bytes.NewBuffer(reqBodyJSON), rule.Id)
 
-	fmt.Println("-----------------------")
-	fmt.Printf("%v\n", bytes.NewBuffer(reqBodyJSON))
-	fmt.Println("-----------------------")
-
-	req, _ := http.NewRequest("PUT", "/api/alerting/rule/", bytes.NewBuffer(reqBodyJSON))
+	path := fmt.Sprintf("/api/alerting/rule/%s", rule.Id)
+	req, _ := http.NewRequest("PUT", path, bytes.NewBuffer(reqBodyJSON))
 
 	req.SetBasicAuth("elastic", "changeme")
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("kbn-xsrf", "true")
 
 	res, err := t.est.Perform(req)
-	// fmt.Printf("called it! %#v", res)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	responseBody, err := io.ReadAll(res.Body)
-	if err != nil {
-		return diag.FromErr(err)
-	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
@@ -201,8 +194,6 @@ func (t *KibanaApiClient) PutKibanaRule(ctx context.Context, rule *models.Rule) 
 		fmt.Printf("%#v", apiError)
 		return diag.FromErr(fmt.Errorf("api error response message \"%s\"", apiError.Message))
 	}
-
-	fmt.Printf("not an error %s \n", string(responseBody))
 
 	return diags
 }

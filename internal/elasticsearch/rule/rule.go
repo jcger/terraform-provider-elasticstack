@@ -3,7 +3,6 @@ package rule
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"github.com/elastic/terraform-provider-elasticstack/internal/clients"
 	"github.com/elastic/terraform-provider-elasticstack/internal/models"
@@ -58,6 +57,7 @@ func ResourceRule() *schema.Resource {
 			Default:          "{}",
 		},
 	}
+
 	utils.AddConnectionSchema(rulesSchema)
 	return &schema.Resource{
 		Description:   "Creates Elasticsearch rules. See https://www.elastic.co/guide/en/kibana/current/create-rule-api.html",
@@ -93,12 +93,13 @@ func resourceRuleCreate(ctx context.Context, d *schema.ResourceData, meta interf
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	var rule models.Rule
 
-	rule.Name = d.Get("name").(string)
-	rule.Consumer = d.Get("consumer").(string)
-	rule.NotifyWhen = d.Get("notify_when").(string)
-	rule.RuleTypeId = d.Get("rule_type_id").(string)
+	rule := models.Rule{ // id is not set yet
+		Name:       d.Get("name").(string),
+		Consumer:   d.Get("consumer").(string),
+		NotifyWhen: d.Get("notify_when").(string),
+		RuleTypeId: d.Get("rule_type_id").(string),
+	}
 
 	if v, ok := d.GetOk("schedule"); ok {
 		var schedule models.AlertRuleSchedule
@@ -121,11 +122,8 @@ func resourceRuleCreate(ctx context.Context, d *schema.ResourceData, meta interf
 	}
 
 	if diags := client.PostKibanaRule(ctx, &rule); diags.HasError() {
-		fmt.Println("it has an error!!!!!!!!!!")
 		return diags
 	}
-
-	fmt.Printf("diags %#v", diags)
 
 	// needs to be set, otherwise terraform won't realize the object was created and launch an error
 	// from https://developer.hashicorp.com/terraform/tutorials/providers/provider-setup
@@ -133,8 +131,8 @@ func resourceRuleCreate(ctx context.Context, d *schema.ResourceData, meta interf
 	// any string value, but should be a value that Terraform can use to read the resource again. Since this
 	// data resource doesn't have a unique ID, you set the ID to the current UNIX time, which will force this
 	// resource to refresh during every Terraform apply."
+	// fmt.Printf("the rule is %s\n", rule.Id)
 	d.SetId(rule.Id)
-	fmt.Printf("the rule is %s\n", rule.Id)
 	return diags
 }
 
@@ -159,12 +157,14 @@ func resourceRuleUpdate(ctx context.Context, d *schema.ResourceData, meta interf
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	var rule models.Rule
 
-	rule.Name = d.Get("name").(string)
-	rule.Consumer = d.Get("consumer").(string)
-	rule.NotifyWhen = d.Get("notify_when").(string)
-	rule.RuleTypeId = d.Get("rule_type_id").(string)
+	rule := models.Rule{
+		Id:         d.Get("id").(string),
+		Name:       d.Get("name").(string),
+		Consumer:   d.Get("consumer").(string),
+		NotifyWhen: d.Get("notify_when").(string),
+		RuleTypeId: d.Get("rule_type_id").(string),
+	}
 
 	if v, ok := d.GetOk("schedule"); ok {
 		var schedule models.AlertRuleSchedule
@@ -186,13 +186,9 @@ func resourceRuleUpdate(ctx context.Context, d *schema.ResourceData, meta interf
 		rule.Params = params
 	}
 
-	if diags := client.PostKibanaRule(ctx, &rule); diags.HasError() {
-		fmt.Println("it has an error!!!!!!!!!!")
+	if diags := client.PutKibanaRule(ctx, &rule); diags.HasError() {
 		return diags
 	}
 
-	fmt.Printf("diags %#v", diags)
-
-	// d.SetId("test")
 	return diags
 }
