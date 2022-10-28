@@ -193,8 +193,8 @@ type AlertRuleSchedule struct {
 }
 
 type Rule struct {
-	Consumer string `json:"consumer"`
-	// Id         string            `json:"id"`
+	Consumer   string            `json:"consumer"`
+	Id         string            `json:"id"`
 	Name       string            `json:"name"`
 	NotifyWhen string            `json:"notify_when"`
 	Params     AlertRuleParams   `json:"params"`
@@ -202,6 +202,7 @@ type Rule struct {
 	Schedule   AlertRuleSchedule `json:"schedule"`
 }
 
+// NameInOurStruct type nameInTerraform file
 type AlertRuleParams struct {
 	AggField            string   `json:"aggField"`
 	AggType             string   `json:"aggType"`
@@ -216,6 +217,8 @@ type AlertRuleParams struct {
 	TimeWindowUnit      string   `json:"timeWindowUnit"`
 }
 
+// if activating this we would need to use (for example) agg_type in our
+// terraform file
 // type AlertRuleParams struct {
 // 	AggType             string   `json:"agg_type"`
 // 	TermSize            string   `json:"term_size"`

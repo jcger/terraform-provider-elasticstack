@@ -3,6 +3,7 @@ package rule
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/elastic/terraform-provider-elasticstack/internal/clients"
 	"github.com/elastic/terraform-provider-elasticstack/internal/models"
@@ -15,11 +16,11 @@ import (
 
 func ResourceRule() *schema.Resource {
 	rulesSchema := map[string]*schema.Schema{
-		// "id": {
-		// 	Description: "Internal identifier of the resource",
-		// 	Type:        schema.TypeString,
-		// 	Required:    true,
-		// },
+		"id": {
+			Description: "Internal identifier of the resource",
+			Type:        schema.TypeString,
+			Computed:    true,
+		},
 		"name": {
 			Description: "A name to reference and search",
 			Type:        schema.TypeString,
@@ -40,19 +41,6 @@ func ResourceRule() *schema.Resource {
 			Type:        schema.TypeString,
 			Required:    true,
 		},
-		// "schedule": {
-		// 	Description: "The check interval, which specifies how frequently the rule conditions are checked",
-		// 	Type:        schema.TypeMap,
-		// 	Required:    true,
-		// 	Elem: &schema.Resource{
-		// 		Schema: map[string]*schema.Schema{
-		// 			"interval": {
-		// 				Type:     schema.TypeString,
-		// 				Required: true,
-		// 			},
-		// 		},
-		// 	},
-		// },
 		"schedule": {
 			Description:      "The check interval, which specifies how frequently the rule conditions are checked",
 			Type:             schema.TypeString,
@@ -69,68 +57,6 @@ func ResourceRule() *schema.Resource {
 			ValidateFunc:     validation.StringIsJSON,
 			Default:          "{}",
 		},
-		// params depend on each rule type
-		// we don't have a specific definition
-		// "params": {
-		// 	Description: "Rule parameters",
-		// 	Required:    true,
-		// 	Type:        schema.TypeMap,
-
-		// 	Elem: &schema.Resource{
-		// 		Schema: map[string]*schema.Schema{
-		// 			"agg_type": {
-		// 				Type:     schema.TypeString,
-		// 				Required: true,
-		// 			},
-		// 			"term_size": {
-		// 				Type:     schema.TypeInt,
-		// 				Required: true,
-		// 			},
-		// 			"threshold_comparator": {
-		// 				Type:     schema.TypeString,
-		// 				Required: true,
-		// 			},
-		// 			"time_window_size": {
-		// 				Type:     schema.TypeInt,
-		// 				Required: true,
-		// 			},
-		// 			"time_window_unit": {
-		// 				Type:     schema.TypeString,
-		// 				Required: true,
-		// 			},
-		// 			"group_by": {
-		// 				Type:     schema.TypeString,
-		// 				Required: true,
-		// 			},
-		// 			"threshold": {
-		// 				Type: schema.TypeSet,
-		// 				Elem: &schema.Schema{
-		// 					Type: schema.TypeInt,
-		// 				},
-		// 				Required: true,
-		// 			},
-		// 			"index": {
-		// 				Type: schema.TypeSet,
-		// 				Elem: &schema.Schema{
-		// 					Type: schema.TypeString,
-		// 				},
-		// 				Required: true,
-		// 			},
-		// 			"time_field": {
-		// 				Type:     schema.TypeString,
-		// 				Required: true,
-		// 			},
-		// 			"agg_field": {
-		// 				Type:     schema.TypeString,
-		// 				Required: true,
-		// 			},
-		// 			"term_field": {
-		// 				Type:     schema.TypeString,
-		// 				Required: true,
-		// 			},
-		// 		},
-		// 	},
-		// },
 	}
 	utils.AddConnectionSchema(rulesSchema)
 	return &schema.Resource{
@@ -194,11 +120,21 @@ func resourceRuleCreate(ctx context.Context, d *schema.ResourceData, meta interf
 		rule.Params = params
 	}
 
-	if diags := client.PutKibanaRule(ctx, &rule); diags.HasError() {
+	if diags := client.PostKibanaRule(ctx, &rule); diags.HasError() {
+		fmt.Println("it has an error!!!!!!!!!!")
 		return diags
 	}
 
-	// d.SetId(id.String())
+	fmt.Printf("diags %#v", diags)
+
+	// needs to be set, otherwise terraform won't realize the object was created and launch an error
+	// from https://developer.hashicorp.com/terraform/tutorials/providers/provider-setup
+	// "The existence of a non-blank ID tells Terraform that a resource was created. This ID can be
+	// any string value, but should be a value that Terraform can use to read the resource again. Since this
+	// data resource doesn't have a unique ID, you set the ID to the current UNIX time, which will force this
+	// resource to refresh during every Terraform apply."
+	d.SetId(rule.Id)
+	fmt.Printf("the rule is %s\n", rule.Id)
 	return diags
 }
 
@@ -218,7 +154,45 @@ func resourceRuleDelete(ctx context.Context, d *schema.ResourceData, meta interf
 
 func resourceRuleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	tflog.Warn(ctx, "********************************* resourceRuleUpdate")
-
 	var diags diag.Diagnostics
+	client, err := clients.NewKibanaApiClient(d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	var rule models.Rule
+
+	rule.Name = d.Get("name").(string)
+	rule.Consumer = d.Get("consumer").(string)
+	rule.NotifyWhen = d.Get("notify_when").(string)
+	rule.RuleTypeId = d.Get("rule_type_id").(string)
+
+	if v, ok := d.GetOk("schedule"); ok {
+		var schedule models.AlertRuleSchedule
+		if v.(string) != "" {
+			if err := json.Unmarshal([]byte(v.(string)), &schedule); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+		rule.Schedule = schedule
+	}
+
+	if v, ok := d.GetOk("params"); ok {
+		var params models.AlertRuleParams
+		if v.(string) != "" {
+			if err := json.Unmarshal([]byte(v.(string)), &params); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+		rule.Params = params
+	}
+
+	if diags := client.PostKibanaRule(ctx, &rule); diags.HasError() {
+		fmt.Println("it has an error!!!!!!!!!!")
+		return diags
+	}
+
+	fmt.Printf("diags %#v", diags)
+
+	// d.SetId("test")
 	return diags
 }
