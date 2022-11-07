@@ -1,7 +1,7 @@
 .DEFAULT_GOAL = help
 SHELL := /bin/bash
 
-VERSION ?= 0.3.3
+VERSION ?= 0.4.0
 
 NAME = elasticstack
 BINARY = terraform-provider-${NAME}
@@ -20,17 +20,16 @@ $(GOBIN): ## create bin/ in the current directory
 
 
 .PHONY: build
-build: lint ## build the terraform provider
-	go build -o ${BINARY}
+build: lint build-ci ## build the terraform provider
 
 
 .PHONY: testacc
-testacc: lint ## Run acceptance tests
+testacc: ## Run acceptance tests
 	TF_ACC=1 go test -v ./... -count $(ACCTEST_COUNT) -parallel $(ACCTEST_PARALLELISM) $(TESTARGS) -timeout $(ACCTEST_TIMEOUT)
 
 
 .PHONY: test
-test: lint ## Run unit tests
+test: ## Run unit tests
 	go test -v $(TEST) $(TESTARGS) -timeout=5m -parallel=4
 
 
@@ -75,7 +74,24 @@ golangci-lint:
 
 
 .PHONY: lint
-lint: setup misspell golangci-lint ## Run lints to check the spelling and common go patterns
+lint: setup misspell golangci-lint check-fmt check-docs ## Run lints to check the spelling and common go patterns
+
+.PHONY: fmt
+fmt: ## Format code
+	go fmt ./...
+	terraform fmt --recursive
+
+.PHONY:check-fmt
+check-fmt: fmt ## Check if code is formatted
+	@if [ "`git status --porcelain `" ]; then \
+	  echo "Unformatted files were detected. Please run 'make fmt' to format code, and commit the changes" && echo `git status --porcelain docs/` && exit 1; \
+	fi
+
+.PHONY: check-docs
+check-docs: docs-generate  ## Check uncommitted changes on docs
+	@if [ "`git status --porcelain docs/`" ]; then \
+	  echo "Uncommitted changes were detected in the docs folder. Please run 'make docs-generate' to autogenerate the docs, and commit the changes" && echo `git status --porcelain docs/` && exit 1; \
+	fi
 
 
 .PHONY: setup
@@ -113,7 +129,7 @@ endif
 
 .PHONY: release-notes
 release-notes: ## greps UNRELEASED notes from the CHANGELOG
-	@ awk '/## \[Unreleased\]/{flag=1;next}/## \[.*\] - /{flag=0}flag' CHANGELOG.md 
+	@ awk '/## \[Unreleased\]/{flag=1;next}/## \[.*\] - /{flag=0}flag' CHANGELOG.md
 
 
 .PHONY: help

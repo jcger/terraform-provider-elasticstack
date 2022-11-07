@@ -6,6 +6,7 @@ import (
 	"github.com/elastic/terraform-provider-elasticstack/internal/elasticsearch/index"
 	"github.com/elastic/terraform-provider-elasticstack/internal/elasticsearch/ingest"
 	"github.com/elastic/terraform-provider-elasticstack/internal/elasticsearch/rule"
+	"github.com/elastic/terraform-provider-elasticstack/internal/elasticsearch/logstash"
 	"github.com/elastic/terraform-provider-elasticstack/internal/elasticsearch/security"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -118,6 +119,8 @@ func New(version string) func() *schema.Provider {
 				"elasticstack_elasticsearch_ingest_processor_urldecode":         ingest.DataSourceProcessorUrldecode(),
 				"elasticstack_elasticsearch_ingest_processor_uri_parts":         ingest.DataSourceProcessorUriParts(),
 				"elasticstack_elasticsearch_ingest_processor_user_agent":        ingest.DataSourceProcessorUserAgent(),
+				"elasticstack_elasticsearch_security_role":                      security.DataSourceRole(),
+				"elasticstack_elasticsearch_security_role_mapping":              security.DataSourceRoleMapping(),
 				"elasticstack_elasticsearch_security_user":                      security.DataSourceUser(),
 				"elasticstack_elasticsearch_snapshot_repository":                cluster.DataSourceSnapshotRespository(),
 			},
@@ -129,12 +132,14 @@ func New(version string) func() *schema.Provider {
 				"elasticstack_elasticsearch_index_lifecycle":       index.ResourceIlm(),
 				"elasticstack_elasticsearch_index_template":        index.ResourceTemplate(),
 				"elasticstack_elasticsearch_ingest_pipeline":       ingest.ResourceIngestPipeline(),
+				"elasticstack_elasticsearch_logstash_pipeline":     logstash.ResourceLogstashPipeline(),
 				"elasticstack_elasticsearch_security_role":         security.ResourceRole(),
 				"elasticstack_elasticsearch_security_role_mapping": security.ResourceRoleMapping(),
 				"elasticstack_elasticsearch_security_user":         security.ResourceUser(),
 				"elasticstack_elasticsearch_snapshot_lifecycle":    cluster.ResourceSlm(),
 				"elasticstack_elasticsearch_snapshot_repository":   cluster.ResourceSnapshotRepository(),
 				"elasticstack_elasticsearch_rule":                  rule.ResourceRule(),
+				"elasticstack_elasticsearch_script":                cluster.ResourceScript(),
 			},
 		}
 

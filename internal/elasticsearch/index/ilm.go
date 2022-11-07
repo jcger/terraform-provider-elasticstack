@@ -9,6 +9,7 @@ import (
 	"github.com/elastic/terraform-provider-elasticstack/internal/clients"
 	"github.com/elastic/terraform-provider-elasticstack/internal/models"
 	"github.com/elastic/terraform-provider-elasticstack/internal/utils"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -501,7 +502,7 @@ func expandAction(a []interface{}, settings ...string) (map[string]interface{}, 
 	def := make(map[string]interface{})
 
 	// can be zero, so we must skip the empty check
-	settingsToSkip := map[string]struct{}{"number_of_replicas": struct{}{}, "priority": struct{}{}}
+	settingsToSkip := map[string]struct{}{"number_of_replicas": {}, "priority": {}}
 
 	if action := a[0]; action != nil {
 		for _, setting := range settings {
@@ -540,6 +541,7 @@ func resourceIlmRead(ctx context.Context, d *schema.ResourceData, meta interface
 
 	ilmDef, diags := client.GetElasticsearchIlm(ctx, policyId)
 	if ilmDef == nil && diags == nil {
+		tflog.Warn(ctx, fmt.Sprintf(`ILM policy "%s" not found, removing from state`, compId.ResourceId))
 		d.SetId("")
 		return diags
 	}
@@ -651,6 +653,5 @@ func resourceIlmDelete(ctx context.Context, d *schema.ResourceData, meta interfa
 		return diags
 	}
 
-	d.SetId("")
 	return diags
 }

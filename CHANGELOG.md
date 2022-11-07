@@ -1,8 +1,28 @@
 ## [Unreleased]
+
 ### Added
+- New resource `elasticstack_elasticsearch_logstash_pipeline` to manage Logstash pipelines ([Centralized Pipeline Management](https://www.elastic.co/guide/en/logstash/current/logstash-centralized-pipeline-management.html)) ([#151](https://github.com/elastic/terraform-provider-elasticstack/pull/151))
+- Add `elasticstack_elasticsearch_script` resource ([#173](https://github.com/elastic/terraform-provider-elasticstack/pull/173))
+- Add `elasticstack_elasticsearch_security_role` data source ([#177](https://github.com/elastic/terraform-provider-elasticstack/pull/177))
+- Add `elasticstack_elasticsearch_security_role_mapping` data source ([#178](https://github.com/elastic/terraform-provider-elasticstack/pull/178))
+
+### Fixed
+- Remove unnecessary unsetting id on delete ([#174](https://github.com/elastic/terraform-provider-elasticstack/pull/174))
+- Fix not found handling for snapshot repository ([#175](https://github.com/elastic/terraform-provider-elasticstack/pull/175))
+- Add warn log when to remove resource from state ([#185](https://github.com/elastic/terraform-provider-elasticstack/pull/185))
+- Import snapshot repository name when importing ([#187](https://github.com/elastic/terraform-provider-elasticstack/pull/187))
+
+## [0.4.0] - 2022-10-07
+### Added
+
 - Add ca_data field to provider schema ([#145](https://github.com/elastic/terraform-provider-elasticstack/pull/145))
 - Add individual setting fields ([#137](https://github.com/elastic/terraform-provider-elasticstack/pull/137))
 - Allow use of `api_key` instead of `username`/`password` for authentication ([#130](https://github.com/elastic/terraform-provider-elasticstack/pull/130))
+- Add `allow_restricted_indices` setting to security role ([#125](https://github.com/elastic/terraform-provider-elasticstack/issues/125))
+- Add conditional to only set `password` and `password_hash` when a new value is defined ([#127](https://github.com/elastic/terraform-provider-elasticstack/pull/128))
+- Add support for ELASTICSEARCH_INSECURE environment variable as the default of the `insecure` config value ([#127](https://github.com/elastic/terraform-provider-elasticstack/pull/128))
+- Add elasticstack_elasticsearch_security_role_mapping resource ([148](https://github.com/elastic/terraform-provider-elasticstack/pull/148))
+
 ### Fixed
 - Refactor main function not to use deprecated debug method ([#149](https://github.com/elastic/terraform-provider-elasticstack/pull/149))
 - Expose provider package ([#142](https://github.com/elastic/terraform-provider-elasticstack/pull/142))
@@ -10,12 +30,9 @@
 - Make API calls context aware to be able to handle timeouts ([#138](https://github.com/elastic/terraform-provider-elasticstack/pull/138))
 - Correctly identify a missing security user ([#101](https://github.com/elastic/terraform-provider-elasticstack/issues/101))
 - Support **7.x** Elasticsearch < **7.15** by removing the default `media_type` attribute in the Append processor ([#118](https://github.com/elastic/terraform-provider-elasticstack/pull/118))
-- Add `allow_restricted_indices` setting to security role ([#125](https://github.com/elastic/terraform-provider-elasticstack/issues/125))
-- Add conditional to only set `password` and `password_hash` when a new value is defined ([#127](https://github.com/elastic/terraform-provider-elasticstack/pull/128))
-- Add support for ELASTICSEARCH_INSECURE environment variable as the default of the `insecure` config value ([#127](https://github.com/elastic/terraform-provider-elasticstack/pull/128))
-- Add elasticstack_elasticsearch_security_role_mapping resource ([148](https://github.com/elastic/terraform-provider-elasticstack/pull/148))
 
-## [0.3.3] - 2023-03-22
+
+## [0.3.3] - 2022-03-22
 ### Fixed
 - Make sure it is possible to set priority to `0` in ILM template ([#88](https://github.com/elastic/terraform-provider-elasticstack/issues/88))
 - Set the ILM name on read operation ([#87](https://github.com/elastic/terraform-provider-elasticstack/issues/87))
@@ -64,7 +81,8 @@
 - Initial set of docs
 - CI integration
 
-[Unreleased]: https://github.com/elastic/terraform-provider-elasticstack/compare/v0.3.3...HEAD
+[Unreleased]: https://github.com/elastic/terraform-provider-elasticstack/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/elastic/terraform-provider-elasticstack/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/elastic/terraform-provider-elasticstack/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/elastic/terraform-provider-elasticstack/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/elastic/terraform-provider-elasticstack/compare/v0.3.0...v0.3.1

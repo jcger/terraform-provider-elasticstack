@@ -39,12 +39,7 @@ func (a *ApiClient) GetElasticsearchSnapshotRepository(ctx context.Context, name
 	}
 	defer res.Body.Close()
 	if res.StatusCode == http.StatusNotFound {
-		diags = append(diags, diag.Diagnostic{
-			Severity: diag.Error,
-			Summary:  "Unable to find requested repository",
-			Detail:   fmt.Sprintf(`Repository "%s" is missing in the ES API response`, name),
-		})
-		return nil, diags
+		return nil, nil
 	}
 	if diags := utils.CheckError(res, fmt.Sprintf("Unable to get the information about snapshot repository: %s", name)); diags.HasError() {
 		return nil, diags
@@ -55,6 +50,9 @@ func (a *ApiClient) GetElasticsearchSnapshotRepository(ctx context.Context, name
 	}
 
 	if currentRepo, ok := snapRepoResponse[name]; ok {
+		if len(currentRepo.Name) <= 0 {
+			currentRepo.Name = name
+		}
 		return &currentRepo, diags
 	}
 
@@ -113,10 +111,10 @@ func (a *ApiClient) GetElasticsearchSlm(ctx context.Context, slmName string) (*m
 	if diags := utils.CheckError(res, "Unable to get SLM policy from ES API"); diags.HasError() {
 		return nil, diags
 	}
-	type SlmReponse = map[string]struct {
+	type SlmResponse = map[string]struct {
 		Policy models.SnapshotPolicy `json:"policy"`
 	}
-	var slmResponse SlmReponse
+	var slmResponse SlmResponse
 	if err := json.NewDecoder(res.Body).Decode(&slmResponse); err != nil {
 		return nil, diag.FromErr(err)
 	}
@@ -179,4 +177,59 @@ func (a *ApiClient) GetElasticsearchSettings(ctx context.Context) (map[string]in
 		return nil, diag.FromErr(err)
 	}
 	return clusterSettings, diags
+}
+
+func (a *ApiClient) GetElasticsearchScript(ctx context.Context, id string) (*models.Script, diag.Diagnostics) {
+	res, err := a.es.GetScript(id, a.es.GetScript.WithContext(ctx))
+	if err != nil {
+		return nil, diag.FromErr(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode == http.StatusNotFound {
+		return nil, nil
+	}
+	if diags := utils.CheckError(res, fmt.Sprintf("Unable to get stored script: %s", id)); diags.HasError() {
+		return nil, diags
+	}
+	var scriptResponse struct {
+		Script *models.Script `json:"script"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&scriptResponse); err != nil {
+		return nil, diag.FromErr(err)
+	}
+
+	return scriptResponse.Script, nil
+}
+
+func (a *ApiClient) PutElasticsearchScript(ctx context.Context, script *models.Script) diag.Diagnostics {
+	req := struct {
+		Script *models.Script `json:"script"`
+	}{
+		script,
+	}
+	scriptBytes, err := json.Marshal(req)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	res, err := a.es.PutScript(script.ID, bytes.NewReader(scriptBytes), a.es.PutScript.WithContext(ctx), a.es.PutScript.WithScriptContext(script.Context))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	defer res.Body.Close()
+	if diags := utils.CheckError(res, "Unable to put stored script"); diags.HasError() {
+		return diags
+	}
+	return nil
+}
+
+func (a *ApiClient) DeleteElasticsearchScript(ctx context.Context, id string) diag.Diagnostics {
+	res, err := a.es.DeleteScript(id, a.es.DeleteScript.WithContext(ctx))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	defer res.Body.Close()
+	if diags := utils.CheckError(res, fmt.Sprintf("Unable to delete script: %s", id)); diags.HasError() {
+		return diags
+	}
+	return nil
 }

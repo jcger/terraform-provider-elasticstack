@@ -1,6 +1,6 @@
 # Terraform Provider Elastic Stack
 
-[![Acceptance Status](https://devops-ci.elastic.co/job/elastic+terraform-provider-elasticstack+main/badge/icon?subject=acceptance)](https://devops-ci.elastic.co/job/elastic+terraform-provider-elasticstack+main/)
+[![Acceptance Status](https://github.com/elastic/terraform-provider-elasticstack/actions/workflows/test.yml/badge.svg)](https://github.com/elastic/terraform-provider-elasticstack/actions/workflows/test.yml)
 
 ## Use of the provider
 The Elastic Stack provider allows you to manage and configure the Elastic stack (Elasticsearch, Kibana, etc) as code using `terraform`.
@@ -22,7 +22,7 @@ terraform {
   required_providers {
     elasticstack = {
       source  = "elastic/elasticstack"
-      version = "~> 0.3.3"
+      version = "~> 0.4.0"
     }
   }
 }

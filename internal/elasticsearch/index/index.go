@@ -376,32 +376,36 @@ func ResourceIndex() *schema.Resource {
 			Description: "Set the number of characters of the `_source` to include in the slowlog lines, `false` or `0` will skip logging the source entirely and setting it to `true` will log the entire source regardless of size. The original `_source` is reformatted by default to make sure that it fits on a single log line.",
 			Optional:    true,
 		},
+		// To change analyzer setting, the index must be closed, updated, and then reopened but it can't be handled in terraform.
+		// We raise error when they are tried to be updated instead of setting ForceNew not to have unexpected deletion.
 		"analysis_analyzer": {
 			Type:         schema.TypeString,
 			Description:  "A JSON string describing the analyzers applied to the index.",
 			Optional:     true,
-			ForceNew:     true, // To add an analyzer, the index must be closed, updated, and then reopened; we can't handle that here.
 			ValidateFunc: validation.StringIsJSON,
 		},
 		"analysis_tokenizer": {
 			Type:         schema.TypeString,
 			Description:  "A JSON string describing the tokenizers applied to the index.",
 			Optional:     true,
-			ForceNew:     true, // To add a tokenizer, the index must be closed, updated, and then reopened; we can't handle that here.
+			ValidateFunc: validation.StringIsJSON,
+		},
+		"analysis_char_filter": {
+			Type:         schema.TypeString,
+			Description:  "A JSON string describing the char_filters applied to the index.",
+			Optional:     true,
 			ValidateFunc: validation.StringIsJSON,
 		},
 		"analysis_filter": {
 			Type:         schema.TypeString,
 			Description:  "A JSON string describing the filters applied to the index.",
 			Optional:     true,
-			ForceNew:     true, // To add a filter, the index must be closed, updated, and then reopened; we can't handle that here.
 			ValidateFunc: validation.StringIsJSON,
 		},
 		"analysis_normalizer": {
 			Type:         schema.TypeString,
 			Description:  "A JSON string describing the normalizers applied to the index.",
 			Optional:     true,
-			ForceNew:     true, // To add a normalizer, the index must be closed, updated, and then reopened; we can't handle that here.
 			ValidateFunc: validation.StringIsJSON,
 		},
 		"alias": {
@@ -521,7 +525,7 @@ If specified, this mapping can include: field names, [field data types](https://
 				// first populate what we can with Read
 				diags := resourceIndexRead(ctx, d, m)
 				if diags.HasError() {
-					return nil, fmt.Errorf("Unable to import requested index")
+					return nil, fmt.Errorf("unable to import requested index")
 				}
 
 				client, err := clients.NewApiClient(d, m)
@@ -530,12 +534,12 @@ If specified, this mapping can include: field names, [field data types](https://
 				}
 				compId, diags := clients.CompositeIdFromStr(d.Id())
 				if diags.HasError() {
-					return nil, fmt.Errorf("Failed to parse provided ID")
+					return nil, fmt.Errorf("failed to parse provided ID")
 				}
 				indexName := compId.ResourceId
 				index, diags := client.GetElasticsearchIndex(ctx, indexName)
 				if diags.HasError() {
-					return nil, fmt.Errorf("Failed to get an ES Index")
+					return nil, fmt.Errorf("failed to get an ES Index")
 				}
 
 				// check the settings and import those as well
@@ -564,7 +568,7 @@ If specified, this mapping can include: field names, [field data types](https://
 							}
 							value = v
 						}
-						if err := d.Set(convertSettingsKeyToTFFieldKey(key), value); err != nil {
+						if err := d.Set(utils.ConvertSettingsKeyToTFFieldKey(key), value); err != nil {
 							return nil, err
 						}
 					}
@@ -672,7 +676,7 @@ func resourceIndexCreate(ctx context.Context, d *schema.ResourceData, meta inter
 	}
 
 	index.Settings = map[string]interface{}{}
-	if settings := expandIndividuallyDefinedIndexSettings(ctx, d, allSettingsKeys); len(settings) > 0 {
+	if settings := utils.ExpandIndividuallyDefinedSettings(ctx, d, allSettingsKeys); len(settings) > 0 {
 		index.Settings = settings
 	}
 
@@ -694,6 +698,14 @@ func resourceIndexCreate(ctx context.Context, d *schema.ResourceData, meta inter
 			return diag.FromErr(err)
 		}
 		analysis["tokenizer"] = tokenizer
+	}
+	if charFilterJSON, ok := d.GetOk("analysis_char_filter"); ok {
+		var filter map[string]interface{}
+		bytes := []byte(charFilterJSON.(string))
+		if err = json.Unmarshal(bytes, &filter); err != nil {
+			return diag.FromErr(err)
+		}
+		analysis["char_filter"] = filter
 	}
 	if filterJSON, ok := d.GetOk("analysis_filter"); ok {
 		var filter map[string]interface{}
@@ -784,7 +796,7 @@ func resourceIndexUpdate(ctx context.Context, d *schema.ResourceData, meta inter
 	// settings
 	updatedSettings := make(map[string]interface{})
 	for key := range dynamicsSettingsKeys {
-		fieldKey := convertSettingsKeyToTFFieldKey(key)
+		fieldKey := utils.ConvertSettingsKeyToTFFieldKey(key)
 		if d.HasChange(fieldKey) {
 			updatedSettings[key] = d.Get(fieldKey)
 		}
@@ -863,6 +875,7 @@ func resourceIndexRead(ctx context.Context, d *schema.ResourceData, meta interfa
 	index, diags := client.GetElasticsearchIndex(ctx, indexName)
 	if index == nil && diags == nil {
 		// no index found on ES side
+		tflog.Warn(ctx, fmt.Sprintf(`Index "%s" not found, removing from state`, compId.ResourceId))
 		d.SetId("")
 		return diags
 	}
@@ -916,27 +929,5 @@ func resourceIndexDelete(ctx context.Context, d *schema.ResourceData, meta inter
 	if diags := client.DeleteElasticsearchIndex(ctx, compId.ResourceId); diags.HasError() {
 		return diags
 	}
-	d.SetId("")
 	return diags
-}
-
-func expandIndividuallyDefinedIndexSettings(ctx context.Context, d *schema.ResourceData, settingsKeys map[string]schema.ValueType) map[string]interface{} {
-	settings := make(map[string]interface{})
-	for key := range settingsKeys {
-		tfFieldKey := convertSettingsKeyToTFFieldKey(key)
-		if raw, ok := d.GetOk(tfFieldKey); ok {
-			switch field := raw.(type) {
-			case *schema.Set:
-				settings[key] = field.List()
-			default:
-				settings[key] = raw
-			}
-			tflog.Trace(ctx, fmt.Sprintf("expandIndividuallyDefinedIndexSettings: settingsKey:%+v tfFieldKey:%+v value:%+v, %+v", key, tfFieldKey, raw, settings))
-		}
-	}
-	return settings
-}
-
-func convertSettingsKeyToTFFieldKey(settingKey string) string {
-	return strings.Replace(settingKey, ".", "_", -1)
 }
