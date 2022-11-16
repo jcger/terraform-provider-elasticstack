@@ -11,6 +11,7 @@ import (
 
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/terraform-provider-elasticstack/internal/utils"
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
@@ -133,6 +134,33 @@ func NewApiClientFunc(version string, p *schema.Provider) func(context.Context, 
 	}
 }
 
+func NewAcceptanceTestingClient() (*ApiClient, error) {
+	config := elasticsearch.Config{}
+	config.Header = http.Header{"User-Agent": []string{"elasticstack-terraform-provider/tf-acceptance-testing"}}
+
+	if es := os.Getenv("ELASTICSEARCH_ENDPOINTS"); es != "" {
+		endpoints := make([]string, 0)
+		for _, e := range strings.Split(es, ",") {
+			endpoints = append(endpoints, strings.TrimSpace(e))
+		}
+		config.Addresses = endpoints
+	}
+
+	if username := os.Getenv("ELASTICSEARCH_USERNAME"); username != "" {
+		config.Username = username
+		config.Password = os.Getenv("ELASTICSEARCH_PASSWORD")
+	} else {
+		config.APIKey = os.Getenv("ELASTICSEARCH_API_KEY")
+	}
+
+	es, err := elasticsearch.NewClient(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ApiClient{es, "acceptance-testing"}, nil
+}
+
 func NewApiClient(d *schema.ResourceData, meta interface{}) (*ApiClient, error) {
 	defaultClient := meta.(*ApiClient)
 	// if the config provided let's use it
@@ -198,7 +226,7 @@ func (a *ApiClient) ID(ctx context.Context, resourceId string) (*CompositeId, di
 	return &CompositeId{*clusterId, resourceId}, diags
 }
 
-func (a *ApiClient) ClusterID(ctx context.Context) (*string, diag.Diagnostics) {
+func (a *ApiClient) serverInfo(ctx context.Context) (map[string]interface{}, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	res, err := a.es.Info(a.es.Info.WithContext(ctx))
 	if err != nil {
@@ -213,6 +241,31 @@ func (a *ApiClient) ClusterID(ctx context.Context) (*string, diag.Diagnostics) {
 	if err := json.NewDecoder(res.Body).Decode(&info); err != nil {
 		return nil, diag.FromErr(err)
 	}
+
+	return info, diags
+}
+
+func (a *ApiClient) ServerVersion(ctx context.Context) (*version.Version, diag.Diagnostics) {
+	info, diags := a.serverInfo(ctx)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	rawVersion := info["version"].(map[string]interface{})["number"].(string)
+	serverVersion, err := version.NewVersion(rawVersion)
+	if err != nil {
+		return nil, diag.FromErr(err)
+	}
+
+	return serverVersion, nil
+}
+
+func (a *ApiClient) ClusterID(ctx context.Context) (*string, diag.Diagnostics) {
+	info, diags := a.serverInfo(ctx)
+	if diags.HasError() {
+		return nil, diags
+	}
+
 	if uuid := info["cluster_uuid"].(string); uuid != "" && uuid != "_na_" {
 		tflog.Trace(ctx, fmt.Sprintf("cluster UUID: %s", uuid))
 		return &uuid, diags
