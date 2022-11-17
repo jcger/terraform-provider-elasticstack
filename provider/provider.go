@@ -3,6 +3,7 @@ package provider
 import (
 	"github.com/elastic/terraform-provider-elasticstack/internal/clients"
 	"github.com/elastic/terraform-provider-elasticstack/internal/elasticsearch/cluster"
+	indexConnector "github.com/elastic/terraform-provider-elasticstack/internal/elasticsearch/connector"
 	"github.com/elastic/terraform-provider-elasticstack/internal/elasticsearch/index"
 	"github.com/elastic/terraform-provider-elasticstack/internal/elasticsearch/ingest"
 	"github.com/elastic/terraform-provider-elasticstack/internal/elasticsearch/logstash"
@@ -140,6 +141,7 @@ func New(version string) func() *schema.Provider {
 				"elasticstack_elasticsearch_snapshot_repository":   cluster.ResourceSnapshotRepository(),
 				"elasticstack_elasticsearch_rule":                  rule.ResourceRule(),
 				"elasticstack_elasticsearch_script":                cluster.ResourceScript(),
+				"elasticstack_elasticsearch_index_connector":       indexConnector.ResourceIndexConnector(),
 			},
 		}
 
