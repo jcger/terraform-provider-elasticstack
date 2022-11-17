@@ -218,10 +218,10 @@ type AlertRuleParams struct {
 }
 
 type IndexConnector struct {
-	Id              string `json:"id"`
-	Name            string `json:"name"`
-	ConnectorTypeId string `json:"connector_type_id"`
-	Config          IndexConnectorConfig
+	Id              string               `json:"id"`
+	Name            string               `json:"name"`
+	ConnectorTypeId string               `json:"connector_type_id"`
+	Config          IndexConnectorConfig `json:"config"`
 }
 
 type IndexConnectorConfig struct {
