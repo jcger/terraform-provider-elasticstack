@@ -200,6 +200,7 @@ type Rule struct {
 	Params     AlertRuleParams   `json:"params"`
 	RuleTypeId string            `json:"rule_type_id"`
 	Schedule   AlertRuleSchedule `json:"schedule"`
+	Actions    []AlertRuleAction `json:"actions"`
 }
 
 // NameInOurStruct type nameInTerraform file
@@ -217,6 +218,12 @@ type AlertRuleParams struct {
 	TimeWindowUnit      string   `json:"timeWindowUnit"`
 }
 
+type AlertRuleAction struct {
+	Id     string                 `json:"id"`
+	Group  string                 `json:"group"`
+	Params map[string]interface{} `json:"params"` // different for every kind of action
+}
+
 type IndexConnector struct {
 	Id              string               `json:"id"`
 	Name            string               `json:"name"`
@@ -227,22 +234,6 @@ type IndexConnector struct {
 type IndexConnectorConfig struct {
 	Index string `json:"index"`
 }
-
-// if activating this we would need to use (for example) agg_type in our
-// terraform file
-// type AlertRuleParams struct {
-// 	AggType             string   `json:"agg_type"`
-// 	TermSize            string   `json:"term_size"`
-// 	ThresholdComparator string   `json:"threshold_comparator"`
-// 	TimeWindowSize      string   `json:"time_window_size"`
-// 	TimeWindowUnit      string   `json:"time_window_unit"`
-// 	GroupBy             string   `json:"group_by"`
-// 	Threshold           []int    `json:"threshold"`
-// 	Index               []string `json:"index"`
-// 	TimeField           string   `json:"time_field"`
-// 	AggField            string   `json:"agg_field"`
-// 	TermField           string   `json:"term_field"`
-// }
 
 type LogstashPipeline struct {
 	PipelineID       string                 `json:"-"`

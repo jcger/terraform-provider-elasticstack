@@ -70,6 +70,7 @@ func (t *KibanaApiClient) PostKibanaRule(ctx context.Context, rule *models.Rule)
 
 	body["params"] = params
 	body["schedule"] = schedule
+	body["actions"] = rule.Actions
 
 	// creates a JSON based on the body struct
 	reqBodyJSON, err := json.Marshal(body)
@@ -77,7 +78,7 @@ func (t *KibanaApiClient) PostKibanaRule(ctx context.Context, rule *models.Rule)
 		return diag.FromErr(err)
 	}
 
-	// fmt.Printf("\nReqBodyJSON:\n%v\n\n", bytes.NewBuffer(reqBodyJSON))
+	fmt.Printf("\nReqBodyJSON:\n%v\n\n", bytes.NewBuffer(reqBodyJSON))
 
 	// creates the request
 	req, _ := http.NewRequest("POST", "/api/alerting/rule/", bytes.NewBuffer(reqBodyJSON))

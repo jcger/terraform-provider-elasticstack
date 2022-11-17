@@ -3,6 +3,7 @@ package rule
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/elastic/terraform-provider-elasticstack/internal/clients"
 	"github.com/elastic/terraform-provider-elasticstack/internal/models"
@@ -55,6 +56,16 @@ func ResourceRule() *schema.Resource {
 			DiffSuppressFunc: utils.DiffJsonSuppress,
 			ValidateFunc:     validation.StringIsJSON,
 			Default:          "{}",
+		},
+		"action": {
+			Description: "Rule parameters",
+			Type:        schema.TypeList,
+			Optional:    true,
+			Elem: &schema.Schema{
+				Type:             schema.TypeString, // it's an object encoded as string with jsonencode fn
+				ValidateFunc:     validation.StringIsJSON,
+				DiffSuppressFunc: utils.DiffJsonSuppress,
+			},
 		},
 	}
 
@@ -121,6 +132,21 @@ func resourceRuleCreate(ctx context.Context, d *schema.ResourceData, meta interf
 		rule.Params = params
 	}
 
+	if jsonAction, ok := d.GetOk("action"); ok {
+		fmt.Printf("\nv:\n%v\n\n", jsonAction)
+		var actions []models.AlertRuleAction
+		for _, jsonAction := range jsonAction.([]interface{}) {
+			if jsonAction.(string) != "" {
+				var action models.AlertRuleAction
+				if err := json.Unmarshal([]byte(jsonAction.(string)), &action); err != nil {
+					return diag.FromErr(err)
+				}
+				actions = append(actions, action)
+			}
+		}
+		rule.Actions = actions
+	}
+
 	if diags := client.PostKibanaRule(ctx, &rule); diags.HasError() {
 		return diags
 	}
@@ -184,6 +210,16 @@ func resourceRuleUpdate(ctx context.Context, d *schema.ResourceData, meta interf
 			}
 		}
 		rule.Params = params
+	}
+
+	if v, ok := d.GetOk("actions"); ok {
+		var actions []models.AlertRuleAction
+		if v.(string) != "" {
+			if err := json.Unmarshal([]byte(v.(string)), &actions); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+		rule.Actions = actions
 	}
 
 	if diags := client.PutKibanaRule(ctx, &rule); diags.HasError() {
