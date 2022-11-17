@@ -217,6 +217,17 @@ type AlertRuleParams struct {
 	TimeWindowUnit      string   `json:"timeWindowUnit"`
 }
 
+type IndexConnector struct {
+	Id              string `json:"id"`
+	Name            string `json:"name"`
+	ConnectorTypeId string `json:"connector_type_id"`
+	Config          IndexConnectorConfig
+}
+
+type IndexConnectorConfig struct {
+	Index string `json:"index"`
+}
+
 // if activating this we would need to use (for example) agg_type in our
 // terraform file
 // type AlertRuleParams struct {

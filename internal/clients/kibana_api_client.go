@@ -197,3 +197,78 @@ func (t *KibanaApiClient) PutKibanaRule(ctx context.Context, rule *models.Rule) 
 
 	return diags
 }
+
+func (t *KibanaApiClient) PostKibanaIndexConnector(ctx context.Context, indexConnector *models.IndexConnector) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	// this should be implemented outside this provider
+
+	// creates the post request body
+	var body = make(map[string]interface{})
+	var config = make(map[string]interface{})
+
+	// id is ignored as it will be loaded from the response
+
+	config["index"] = indexConnector.Config.Index
+
+	body["config"] = config
+
+	// creates a JSON based on the body struct
+	reqBodyJSON, err := json.Marshal(body)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	// fmt.Printf("\nReqBodyJSON:\n%v\n\n", bytes.NewBuffer(reqBodyJSON))
+
+	// creates the request
+	req, _ := http.NewRequest("POST", "/api/actions/connector", bytes.NewBuffer(reqBodyJSON))
+
+	// auth should be loaded from somewhere else
+	req.SetBasicAuth("elastic", "changeme")
+	req.Header.Add("Content-Type", "application/json")
+	// required by the API
+	req.Header.Add("kbn-xsrf", "true")
+
+	// does the actual request
+	res, err := t.est.Perform(req)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	// loads the body from the response as the id is in there
+	responseBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	defer res.Body.Close()
+
+	// if the request doesn't return a 200
+	if res.StatusCode != http.StatusOK {
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		var apiError ApiError
+		if err := json.Unmarshal([]byte(responseBody), &apiError); err != nil {
+			return diag.FromErr(err)
+		}
+
+		// we load the message prop to show it to the user
+		return diag.FromErr(fmt.Errorf("api error response message \"%s\"", apiError.Message))
+	}
+
+	// fmt.Printf("\nResponseBody:\n%s\n\n", string(responseBody))
+	// saves the response body into an auxiliar index connector to retrieve the id
+	var auxIndexConnector models.IndexConnector
+	if err := json.Unmarshal([]byte(responseBody), &auxIndexConnector); err != nil {
+		return diag.FromErr(err)
+	}
+
+	// fmt.Printf("\nauxIndexConnector:\n%+v\n\n", auxIndexConnector)
+	// assigns the id to the index connector as the index connector is passed by as it's passed by as reference
+	// the value will be saved outside this function
+	indexConnector.Id = auxIndexConnector.Id
+
+	return diags
+}
