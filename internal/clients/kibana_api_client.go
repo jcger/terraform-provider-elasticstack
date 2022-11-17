@@ -210,7 +210,8 @@ func (t *KibanaApiClient) PostKibanaIndexConnector(ctx context.Context, indexCon
 	// id is ignored as it will be loaded from the response
 
 	config["index"] = indexConnector.Config.Index
-
+	body["name"] = indexConnector.Name
+	body["connector_type_id"] = indexConnector.ConnectorTypeId
 	body["config"] = config
 
 	// creates a JSON based on the body struct

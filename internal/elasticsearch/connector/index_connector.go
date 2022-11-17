@@ -20,6 +20,16 @@ func ResourceIndexConnector() *schema.Resource {
 			Type:        schema.TypeString,
 			Computed:    true,
 		},
+		"name": {
+			Description: "The display name for the connector",
+			Type:        schema.TypeString,
+			Required:    true,
+		},
+		"connector_type_id": {
+			Description: "The connector type ID for the connector. For example, .cases-webhook, .index, .jira, or .server-log.",
+			Type:        schema.TypeString,
+			Required:    true,
+		},
 		"config": {
 			Description:      "The configuration for the connector. Configuration properties vary depending on the connector type",
 			Type:             schema.TypeString,
